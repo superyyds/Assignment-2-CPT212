@@ -1,0 +1,111 @@
+# Function to preprocess the bad character table
+def preprocess_bad_character(pattern):
+    """
+    Creates the bad character table.
+    This table is used to store the last occurrence of each character in the pattern.
+    """
+    bad_char_table = {}
+    length = len(pattern)
+    for i in range(length):
+        bad_char_table[pattern[i]] = i
+    return bad_char_table
+
+# Function to check if a substring of pattern is a prefix
+def is_prefix(pattern, p):
+    """
+    Checks if the substring pattern[p:] is a prefix of the pattern.
+    """
+    length = len(pattern)
+    j = 0
+    for i in range(p, length):
+        if pattern[i] != pattern[j]:
+            return False
+        j += 1
+    return True
+
+# Function to calculate the length of the suffix that matches a prefix of the pattern
+def suffix_length(pattern, p):
+    """
+    Calculates the length of the largest suffix of pattern[:p+1] that is also a prefix of the pattern.
+    """
+    length = len(pattern)
+    i = 0
+    while (pattern[p - i] == pattern[length - 1 - i]) and (i < p):
+        i += 1
+    return i
+
+# Function to preprocess the good suffix table
+def preprocess_good_suffix(pattern):
+    """
+    Creates the good suffix table.
+    This table is used to store the shift amounts for the pattern based on suffix matches.
+    """
+    length = len(pattern)
+    good_suffix_table = [0] * (length + 1)
+    last_prefix_position = length
+
+    # Process each suffix of the pattern
+    for i in range(length - 1, -1, -1):
+        if is_prefix(pattern, i + 1):
+            last_prefix_position = i + 1
+        good_suffix_table[length - 1 - i] = last_prefix_position - i + length - 1
+
+    # Process each suffix to find the length that matches a prefix
+    for i in range(length):
+        slen = suffix_length(pattern, i)
+        good_suffix_table[slen] = length - 1 - i + slen
+
+    return good_suffix_table
+
+# Function to perform the Boyer-Moore string search algorithm
+def boyer_moore(text, pattern):
+    """
+    Searches for the pattern in the given text using the Boyer-Moore algorithm.
+    Returns a list of positions of all occurrences of the pattern in the text, or an empty list if not found.
+    """
+    # Preprocess the bad character and good suffix tables
+    bad_char_table = preprocess_bad_character(pattern)
+    good_suffix_table = preprocess_good_suffix(pattern)
+    pattern_length = len(pattern)
+    text_length = len(text)
+    positions = []
+
+    # Iterate through the text to search for the pattern
+    shifts = 0
+    while shifts <= text_length - pattern_length:
+        j = pattern_length - 1
+
+        # Compare the pattern with the current shift in the text
+        while j >= 0 and pattern[j] == text[shifts + j]:
+            j -= 1
+
+        # If the pattern is found
+        if j < 0:
+            positions.append(shifts)  # Add the position of the match to the list
+            shifts += 1  # Move one character ahead to find other matches
+        else:
+            # Calculate the shift using the bad character and good suffix rules
+            bad_char_shift = j - bad_char_table.get(text[shifts + j], -1)
+            good_suffix_shift = good_suffix_table[j + 1]
+            shifts += max(bad_char_shift, good_suffix_shift)
+
+    return positions
+
+# Main function to take user input and execute the Boyer-Moore search in a loop
+def main():
+    while True:
+        text = input("Enter the text (or type 'exit' to quit): ")
+        if text.lower() == 'exit':
+            break
+        pattern = input("Enter the pattern (or type 'exit' to quit): ")
+        if pattern.lower() == 'exit':
+            break
+        positions = boyer_moore(text, pattern)
+        if positions:
+            print(f"Pattern found at positions: {positions}")
+        else:
+            print("Pattern not found")
+
+# Run the main function
+if __name__ == "__main__":
+    main()
